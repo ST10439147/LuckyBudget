@@ -1,11 +1,11 @@
-# 💰 Pulser DS — The Lucky Budget
+# The Lucky Budget
 > PROG7313 POE Part 3 · Personal Finance Manager
 
 The Lucky Budget helps users manage funds, expenses, goals, and subscriptions — providing financial knowledge and insights to help achieve financial freedom.
 
 ---
 
-## 👥 Collaborators
+## Collaborators
 
 | Name | Student Number | Role |
 |---|---|---|
@@ -16,7 +16,7 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions �
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
@@ -31,7 +31,7 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions �
 
 ---
 
-## ✨ Features
+## Features
 
 | Screen | Description |
 |---|---|
@@ -49,7 +49,7 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions �
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Language:** Kotlin
 - **Min SDK:** 26 (Android 8.0 Oreo) · **Target / Compile SDK:** 36
@@ -91,7 +91,7 @@ activity-ktx                        = "1.9.0"
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Pulserds_PROG7313/
@@ -197,7 +197,7 @@ Pulserds_PROG7313/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -277,7 +277,7 @@ Test results are written to `app/build/reports/tests/testDebugUnitTest/`.
 
 ---
 
-## ⚙️ CI / CD
+## CI / CD
 
 A **GitHub Actions** workflow (`.github/workflows/ci.yml`) triggers automatically on every push and pull request to `main`, as well as manually via `workflow_dispatch`:
 
@@ -306,7 +306,7 @@ A **GitHub Actions** workflow (`.github/workflows/ci.yml`) triggers automaticall
 
 ---
 
-## 🗄 Database
+## Database
 
 Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per user under their Firebase UID, enabling real-time sync across devices.
 
@@ -323,7 +323,7 @@ Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per 
 
 ---
 
-## 🔐 Permissions
+## Permissions
 
 | Permission | Reason |
 |---|---|
@@ -334,13 +334,13 @@ Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per 
 
 ---
 
-## 🎬 Demo Video
+## Demo Video
 
 ▶️ [https://youtu.be/pipU8XDkbBA](https://youtu.be/7QyxXqyV3cc)
 
 ---
 
-## 📚 References
+## References
 
 [1] Google, "Get started with Cloud Firestore," *Firebase Documentation*, 2024. [Online]. Available: https://firebase.google.com/docs/firestore/quickstart. [Accessed: 30 May 2026].
 
@@ -392,7 +392,7 @@ Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per 
 
 ---
 
-## 🤖 Declaration of AI Usage
+## Declaration of AI Usage
 
 ### Usage 1 — Login page troubleshooting
 **Tool:** Claude AI · **Date:** 10/04/2026
