@@ -8,7 +8,7 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions â€
 ## Collaborators
 
 | Name | Role |
-|---|---|---|
+|---|---|
 | Dillon Rinkwest | Lead Developer |
 | Liam Swile | Developer |
 | Patrick Shutte | Developer |
