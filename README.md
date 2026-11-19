@@ -7,12 +7,12 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions â€
 
 ## Collaborators
 
-| Name | Student Number | Role |
+| Name | Role |
 |---|---|---|
-| Dillon Rinkwest | ST10439147 | Group Leader |
-| Liam Swile | ST10438679 | Developer |
-| Patrick Shutte | ST10440987 | Developer |
-| Uzair Essa | ST10440109 | Developer |
+| Dillon Rinkwest | Lead Developer |
+| Liam Swile | Developer |
+| Patrick Shutte | Developer |
+| Uzair Essa | Developer |
 
 ---
 
