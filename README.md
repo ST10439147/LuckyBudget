@@ -12,7 +12,6 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions â€
 | Dillon Rinkwest | Lead Developer |
 | Liam Swile | Developer |
 | Patrick Shutte | Developer |
-| Uzair Essa | Developer |
 
 ---
 
