@@ -1,5 +1,5 @@
 # The Lucky Budget
-> PROG7313 POE Part 3 · Personal Finance Manager
+> Personal Finance Manager
 
 The Lucky Budget helps users manage funds, expenses, goals, and subscriptions — providing financial knowledge and insights to help achieve financial freedom.
 
@@ -12,7 +12,6 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions �
 | Dillon Rinkwest | Lead Developer |
 | Liam Swile | Developer |
 | Patrick Shutte | Developer |
-| Uzair Essa | Developer |
 
 ---
 
