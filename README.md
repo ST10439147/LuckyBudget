@@ -1,5 +1,5 @@
 # The Lucky Budget
-> Personal Finance Manager
+> PROG7313 POE Part 3 · Personal Finance Manager
 
 The Lucky Budget helps users manage funds, expenses, goals, and subscriptions — providing financial knowledge and insights to help achieve financial freedom.
 
@@ -12,39 +12,166 @@ The Lucky Budget helps users manage funds, expenses, goals, and subscriptions �
 | Dillon Rinkwest | Lead Developer |
 | Liam Swile | Developer |
 | Patrick Shutte | Developer |
+| Uzair Essa | Developer |
 
 ---
 
 ## Table of Contents
 
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [CI / CD](#-ci-/-cd)
-- [Database](#-database)
-- [Permissions](#-permissions)
-- [Youtube video](#-demo-video)
-- [References](#-references)
-- [Declaration of AI Usage](#-declaration-of-ai-usage)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [CI / CD](#ci--cd)
+- [Database](#database)
+- [Testing](#testing)
+- [Permissions](#permissions)
+- [Known Limitations](#known-limitations)
+- [Demo Video](#demo-video)
+- [References](#references)
+- [Declaration of AI Usage](#declaration-of-ai-usage)
 
 ---
 
 ## Features
 
-| Screen | Description |
+### Login / Register
+- Email + password authentication via **Firebase Auth**
+- **Google Sign-In** using the Android Credential Manager API — no manual token handling
+- Strict password validation: minimum 8 characters, at least one uppercase letter, one lowercase letter, one digit, and one special character
+- **Forgot password** flow sends a reset email via Firebase
+- Auto-logout when the app goes to the background (configurable via `SessionManager`)
+
+### Dashboard
+- Personalised greeting using the authenticated user's display name
+- **Category tiles** show spending per category for the current month at a glance
+- **Recent transactions** list — the five most recent expense entries across all accounts
+- **Savings goal snapshot** — a horizontally scrollable row of active goals showing progress bars and amounts remaining
+- **Subscription tiles** — upcoming renewal reminders surfaced directly on the home screen
+
+### Transactions
+- Full chronological history of all expense entries
+- Filter by date range, bank account, or category
+- Each entry shows: amount (with currency symbol), category, account, date, and optional notes
+- **Add Transaction** screen: pick a category from a dropdown, select a bank account, enter amount and date, attach an optional receipt image (camera or gallery)
+- Transactions are written to Firestore and immediately reflected across all screens via LiveData observers
+
+### Analytics
+- **Date-range filter** — pick any start and end date using the Material date picker
+- **Custom donut chart** (`DonutChartView`) — renders spending proportions per category using Android Canvas, with animated segment drawing and a centre-label showing total spend
+- Per-account spending breakdown table with individual totals
+- Per-category row list with amounts and percentage of total
+- **PDF export** — `AnalyticsPdfExporter` generates a formatted PDF of the current date range's analytics and shares it via the system share sheet using `FileProvider`
+
+### Category Totals
+- Dedicated screen showing all categories and their total spend for the selected period
+- Tappable rows navigate to a filtered transaction list for that category
+
+### Bank Accounts
+- Add multiple bank accounts (e.g. Cheque, Savings, Credit)
+- Each account tracks its current balance and total spending
+- Per-account spending is calculated from `expense_entries` linked to that account
+- Accounts screen shows a summary card per account; tap to drill into that account's transactions
+
+### Savings Goals
+- Create a goal with a name, target amount, deadline date, and optional minimum / maximum daily spending bands
+- **`SpendingGoalChartView`** — a custom bar chart that plots daily spending against the goal band, drawing a coloured "safe zone" band between the min and max thresholds
+- Goals show a progress bar (amount saved vs. target) and a countdown to the deadline
+- Mark a goal as complete; completed goals are archived separately
+
+### Subscriptions
+- Track recurring services (e.g. Netflix, Spotify, gym membership)
+- Fields: service name, amount, billing cycle (monthly / yearly), start date, next renewal date, auto-pay toggle
+- **Reminders** — opt-in notification reminders N days before renewal
+- Dashboard subscription tiles surface the next-due subscription at a glance
+- `SubscriptionAdapter` groups active vs. paused subscriptions
+
+### Spending Insights (AI)
+- Powered by **Google Gemini 2.5 Flash** via a direct OkHttp REST call to the `generateContent` endpoint
+- The app assembles a structured prompt from the user's last 30 days of transactions, category totals, and savings goal progress, then sends it to Gemini
+- The response is parsed and displayed as:
+  - **Spending summary** — natural-language overview of where money went
+  - **Overspending warnings** — categories that exceeded typical thresholds
+  - **Budget suggestions** — category-level recommendations
+  - **Savings advice** — personalised tips based on goal progress
+- Falls back to a secondary API key (`GEMINI_API_KEY_2`) if the primary key is rate-limited
+- Loading state shown with a progress indicator; errors display a user-friendly message
+
+### Settings
+- **Overspend alerts** — toggle push notifications when a category exceeds its budget
+- **Subscription reminders** — global toggle for renewal reminder notifications
+- **Multi-currency** — select a display currency; `CurrencyManager` fetches live exchange rates and converts all amounts on the fly
+- **Profile management** — update display name and profile photo
+- **Sign out** — clears the session and returns to the login screen
+
+### Manage Categories
+- Create custom expense categories with a name and colour
+- Delete categories that have no linked transactions
+- Categories are user-scoped in Firestore — each user has their own category list
+
+---
+
+## Architecture
+
+Pulser DS follows the **MVVM (Model–View–ViewModel)** pattern recommended by Android Jetpack, layered as follows:
+
+```
+┌─────────────────────────────────────────────┐
+│                   UI Layer                  │
+│  Activities  ·  Adapters  ·  Custom Views   │
+│         observe LiveData / StateFlow        │
+└──────────────────────┬──────────────────────┘
+                       │  calls
+┌──────────────────────▼──────────────────────┐
+│               ViewModel Layer               │
+│  BankAccountViewModel  ·  CategoryViewModel │
+│  ExpenseEntryViewModel  ·  SavingsGoalVM    │
+│  SubscriptionViewModel  ·  UserViewModel    │
+│  SpendingInsightViewModel                   │
+│         exposes LiveData results            │
+└──────────────────────┬──────────────────────┘
+                       │  calls suspend fns
+┌──────────────────────▼──────────────────────┐
+│              Repository Layer               │
+│  UserRepository  ·  CategoryRepository      │
+│  ExpenseEntryRepository  ·  BankAccountRepo │
+│  SavingsGoalRepository  ·  SubsRepository   │
+│         reads / writes Firestore            │
+└──────────────────────┬──────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────┐
+│               Data Sources                  │
+│  Cloud Firestore  ·  Firebase Auth          │
+│  Gemini REST API  ·  Currency Exchange API  │
+└─────────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
 |---|---|
-| **Login / Register** | Firebase Authentication with email/password and **Google Sign-In**. Strict password rules (8+ chars, upper, lower, digit, special character) |
-| **Dashboard** | Personalised greeting, spending category tiles, recent transactions, and a savings-goal snapshot |
-| **Transactions** | Full transaction history; add expense entries linked to a category and bank account |
-| **Analytics** | Date-range filtered spending breakdown with a custom donut chart, per-account / per-category rows, and **PDF export** |
-| **Category Totals** | Detailed view of totals grouped by category |
-| **Bank Accounts** | Add and manage multiple bank accounts; view per-account spending |
-| **Savings Goals** | Create goals with target amounts and deadlines; track progress and mark complete |
-| **Subscriptions** | Track recurring subscriptions (e.g. Netflix, Spotify) with billing cycle, auto-pay, renewal dates, and reminders |
-| **Spending Insights** | **AI-powered analysis via Gemini 2.5 Flash** — spending summaries, overspending warnings, budget suggestions, and savings advice |
-| **Settings** | Toggle preferences (overspend alerts, subscription reminders, **multi-currency**); manage profile and session |
-| **Manage Categories** | Create and manage custom expense categories |
+| **Firestore over Room** | Real-time cross-device sync without a manual sync layer; Part 2 used Room, Part 3 migrated to Firestore |
+| **`SingleLiveEvent`** | Prevents one-shot UI events (toasts, navigation) from re-firing on screen rotation |
+| **`ViewModelFactory`** | Repositories are injected into ViewModels via a factory, keeping ViewModels testable without Android framework dependencies |
+| **`BaseActivity`** | All activities extend `BaseActivity`, which centralises the auto-logout logic and navigation bar setup |
+| **`App.kt` lifecycle callbacks** | Registers `ActivityLifecycleCallbacks` to detect when the app moves to the background and trigger session timeout |
+| **OkHttp over Retrofit for Gemini** | The Gemini endpoint requires a custom JSON body structure; a single OkHttp call is simpler than a Retrofit interface with one method |
+
+### Data Flow Example — Adding a Transaction
+
+```
+AddTransactionActivity
+  → user taps Save
+  → ExpenseEntryViewModel.addEntry(entry)
+      → ExpenseEntryRepository.addEntry(uid, entry)
+          → Firestore.collection("expense_entries").add(doc)
+  → LiveData<Result> emits Success
+  → Activity observes → shows toast → finishes
+  → TransactionsActivity re-observes its LiveData
+      → ExpenseEntryRepository streams snapshot listener
+          → list updates automatically
+```
 
 ---
 
@@ -123,7 +250,7 @@ Pulserds_PROG7313/
 │       │   │   └── SubscriptionRepository.kt
 │       │   │
 │       │   ├── service/
-│       │   │   └── GeminiSpendingService.kt        # Gemini 2.0 Flash REST integration
+│       │   │   └── GeminiSpendingService.kt        # Gemini 2.5 Flash REST integration
 │       │   │
 │       │   ├── ui/                                 # Activities
 │       │   │   ├── BaseActivity.kt
@@ -236,7 +363,12 @@ GEMINI_API_KEY_2=your_gemini_api_key_2_here
 
 ### 3. Firebase Setup
 
-A valid `app/google-services.json` is already included in the repository. No additional Firebase setup is required to run the app.
+A valid `app/google-services.json` is already included in the repository. No additional Firebase setup is required to run the app. The file configures:
+
+- Firebase project ID and app ID
+- Google Sign-In OAuth client IDs
+- Firestore database URL
+- Firebase Analytics
 
 ### 4. Open in Android Studio
 
@@ -274,11 +406,24 @@ To install directly to a connected device:
 
 Test results are written to `app/build/reports/tests/testDebugUnitTest/`.
 
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| **Gradle sync fails with "SDK not found"** | Open `local.properties` and verify `sdk.dir` points to your Android SDK installation |
+| **`GEMINI_API_KEY` build error** | Ensure both `GEMINI_API_KEY` and `GEMINI_API_KEY_2` are present in `local.properties` — the build reads them as `BuildConfig` fields |
+| **Google Sign-In fails at runtime** | The `google-services.json` SHA-1 fingerprint must match your debug keystore. Run `./gradlew signingReport` and add the printed SHA-1 to the Firebase Console under your Android app |
+| **Firestore permission denied** | The Firestore security rules require the user to be authenticated. Make sure you are signed in before making any read/write calls |
+| **Emulator has no internet** | Gemini API and currency exchange calls require a network connection. Ensure the emulator has network access or test on a physical device |
+| **`google-services.json` missing on CI** | The CI workflow writes the file from the `GOOGLE_SERVICES_JSON` repository secret — see [CI / CD](#ci--cd) for setup |
+
 ---
 
 ## CI / CD
 
-A **GitHub Actions** workflow (`.github/workflows/ci.yml`) triggers automatically on every push and pull request to `main`, as well as manually via `workflow_dispatch`:
+A **GitHub Actions** workflow (`.github/workflows/ci.yml`) triggers automatically on every push and pull request to `main`, as well as manually via `workflow_dispatch`.
+
+### Pipeline Steps
 
 | Step | Action |
 |---|---|
@@ -295,19 +440,31 @@ A **GitHub Actions** workflow (`.github/workflows/ci.yml`) triggers automaticall
 | 11 | Run Android Lint (`lintDebug`) |
 | 12–14 | Upload lint report, test results, and debug APK as build artifacts |
 
-**Required repository secrets:**
+### Required Repository Secrets
 
 | Secret | Description |
 |---|---|
 | `GEMINI_API_KEY` | Primary Gemini API key |
 | `GEMINI_API_KEY_2` | Secondary / fallback Gemini API key |
-| `GOOGLE_SERVICES_JSON` | Full contents of `google-services.json` |
+| `GOOGLE_SERVICES_JSON` | Full contents of `google-services.json` (base64-encoded or raw JSON) |
+
+To add secrets: **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**.
+
+### Build Artifacts
+
+After each successful run, the following files are available for download from the workflow summary page:
+
+- `app-debug.apk` — the compiled debug APK
+- `lint-results-debug.html` — Android Lint report
+- `test-results/` — JUnit XML test results
 
 ---
 
 ## Database
 
 Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per user under their Firebase UID, enabling real-time sync across devices.
+
+### Collections
 
 | Collection | Description |
 |---|---|
@@ -318,7 +475,109 @@ Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per 
 | `savings_goals` | Savings targets with deadlines and min/max spending goal bands |
 | `subscriptions` | Recurring subscriptions with billing cycle, renewal date, and reminder settings |
 
+### Document Schemas
+
+#### `users/{uid}`
+```
+displayName    : String
+email          : String
+photoUrl       : String?
+createdAt      : Timestamp
+currency       : String          // e.g. "ZAR", "USD"
+overspendAlerts: Boolean
+subReminders   : Boolean
+```
+
+#### `users/{uid}/categories/{categoryId}`
+```
+name           : String
+colour         : String          // hex colour code
+createdAt      : Timestamp
+```
+
+#### `users/{uid}/expense_entries/{entryId}`
+```
+amount         : Double
+categoryId     : String
+categoryName   : String
+accountId      : String
+accountName    : String
+date           : Timestamp
+notes          : String?
+receiptUrl     : String?
+```
+
+#### `users/{uid}/bank_accounts/{accountId}`
+```
+name           : String          // e.g. "Cheque Account"
+balance        : Double
+createdAt      : Timestamp
+```
+
+#### `users/{uid}/savings_goals/{goalId}`
+```
+name           : String
+targetAmount   : Double
+currentAmount  : Double
+deadline       : Timestamp
+minDailySpend  : Double?
+maxDailySpend  : Double?
+isComplete     : Boolean
+createdAt      : Timestamp
+```
+
+#### `users/{uid}/subscriptions/{subscriptionId}`
+```
+serviceName    : String
+amount         : Double
+billingCycle   : String          // "monthly" | "yearly"
+startDate      : Timestamp
+nextRenewal    : Timestamp
+autoPay        : Boolean
+reminder       : Boolean
+reminderDays   : Int             // days before renewal to notify
+isActive       : Boolean
+```
+
 > A local Room schema export is retained in `app/schemas/` from the Part 2 implementation (version 10). Room is no longer used at runtime.
+
+---
+
+## Testing
+
+### Unit Tests
+
+Unit tests live in `app/src/test/` and are run with:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+The test suite covers:
+
+| Area | What is tested |
+|---|---|
+| **Password validation** | All combinations of missing character classes, length edge cases |
+| **Date formatting** | Date range filter logic, boundary dates |
+| **Currency conversion** | Exchange rate application, rounding behaviour |
+| **Analytics calculations** | Category totals, percentage calculations, date range filtering |
+| **Savings goal progress** | Progress percentage calculation, deadline proximity |
+
+### Instrumented Tests
+
+Instrumented tests (Espresso) live in `app/src/androidTest/`. These require a connected device or emulator and are not run on CI to avoid requiring an emulator in the GitHub Actions environment.
+
+```bash
+./gradlew connectedAndroidTest
+```
+
+### Test Reports
+
+After running tests, open the HTML report in a browser:
+
+```
+app/build/reports/tests/testDebugUnitTest/index.html
+```
 
 ---
 
@@ -330,6 +589,21 @@ Pulser DS uses **Cloud Firestore** as its sole database. All data is stored per 
 | `CAMERA` | Attach receipt photos to transactions (declared as not required) |
 | `READ_MEDIA_IMAGES` (API 33+) | Select images from gallery |
 | `READ_EXTERNAL_STORAGE` (API ≤ 32) | Select images from gallery on older devices |
+
+Permissions are requested at runtime following the Android runtime permissions model. The camera and storage permissions are optional — the app functions fully without them.
+
+---
+
+## Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| **Offline support** | Firestore's local persistence cache allows reads while offline, but writes will queue and sync when connectivity is restored — no explicit offline indicator is shown to the user |
+| **Receipt image storage** | Receipt photos are stored locally on the device; they are not uploaded to Firebase Storage, so they will not sync to other devices |
+| **Currency rates** | Exchange rates are fetched once per session at app launch; they do not update in real time during a session |
+| **Gemini rate limits** | The free tier of the Gemini API has per-minute rate limits; rapid successive calls to the Spending Insights screen may fall back to the secondary key or briefly fail |
+| **No data export** | Only the Analytics screen supports PDF export; transactions cannot be exported to CSV or spreadsheet format |
+| **Single-user device** | Sessions are stored in `SharedPreferences` and are not isolated per Android user account on shared devices |
 
 ---
 
